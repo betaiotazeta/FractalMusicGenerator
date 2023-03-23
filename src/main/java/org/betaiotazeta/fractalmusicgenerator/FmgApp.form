@@ -1064,7 +1064,7 @@
                                   <Component id="directRadioButton" alignment="0" min="-2" max="-2" attributes="0"/>
                                   <Component id="sineRadioButton" alignment="0" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="112" max="32767" attributes="0"/>
+                              <EmptySpace pref="113" max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -1178,7 +1178,7 @@
                               <Group type="103" groupAlignment="0" attributes="0">
                                   <Group type="102" alignment="1" attributes="0">
                                       <Component id="interpolationPointsLabel" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace pref="18" max="32767" attributes="0"/>
+                                      <EmptySpace pref="14" max="32767" attributes="0"/>
                                       <Component id="interpolationPointsSpinner" min="-2" pref="100" max="-2" attributes="0"/>
                                   </Group>
                                   <Group type="102" alignment="0" attributes="0">
@@ -1379,7 +1379,7 @@
                               <Component id="directLeftConversionPanel" min="-2" max="-2" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
                               <Component id="directRightConversionPanel" min="-2" max="-2" attributes="0"/>
-                              <EmptySpace pref="22" max="32767" attributes="0"/>
+                              <EmptySpace max="32767" attributes="0"/>
                               <Component id="jLabel2" min="-2" max="-2" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
                           </Group>
@@ -1479,7 +1479,7 @@
                                       <Component id="minZyDirectLabel" alignment="0" min="-2" max="-2" attributes="0"/>
                                       <Component id="maxZyDirectLabel" alignment="0" min="-2" max="-2" attributes="0"/>
                                   </Group>
-                                  <EmptySpace min="54" pref="29" max="32767" attributes="0"/>
+                                  <EmptySpace min="54" pref="32" max="32767" attributes="0"/>
                                   <Group type="103" groupAlignment="0" max="-2" attributes="0">
                                       <Component id="maxZyDirectSpinner" linkSize="9" max="32767" attributes="0"/>
                                       <Component id="minZyDirectSpinner" linkSize="9" min="-2" pref="100" max="-2" attributes="0"/>
@@ -1568,7 +1568,7 @@
                                   <Component id="minFreqLabel" alignment="0" min="-2" max="-2" attributes="0"/>
                                   <Component id="maxFreqLabel" alignment="0" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="41" max="32767" attributes="0"/>
+                              <EmptySpace pref="40" max="32767" attributes="0"/>
                               <Group type="103" groupAlignment="1" attributes="0">
                                   <Group type="103" groupAlignment="0" max="-2" attributes="0">
                                       <Component id="minFreqSpinner" linkSize="7" alignment="1" max="32767" attributes="0"/>
@@ -2048,7 +2048,7 @@
                                   <Component id="maxMidiEffectLabel" alignment="3" min="-2" max="-2" attributes="0"/>
                                   <Component id="maxMidiEffectSpinner" linkSize="12" alignment="3" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="26" max="32767" attributes="0"/>
+                              <EmptySpace max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -2171,7 +2171,7 @@
                                   <Component id="maxNoteLabel" alignment="3" min="-2" max="-2" attributes="0"/>
                                   <Component id="maxNoteSpinner" linkSize="10" alignment="3" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="26" max="32767" attributes="0"/>
+                              <EmptySpace max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -2456,7 +2456,7 @@
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="0" attributes="0">
                       <EmptySpace max="-2" attributes="0"/>
-                      <Component id="instrumentsPanel" pref="355" max="32767" attributes="0"/>
+                      <Component id="instrumentsPanel" pref="360" max="32767" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                   </Group>
               </Group>
@@ -2597,9 +2597,9 @@
                           </Group>
                           <EmptySpace max="-2" attributes="0"/>
                           <Group type="103" groupAlignment="0" max="-2" attributes="0">
-                              <Component id="drumsReverbPanel" alignment="0" max="-2" attributes="0"/>
-                              <Component id="drumsVelocityPanel" alignment="0" max="32767" attributes="0"/>
-                              <Component id="drumsChorusPanel" max="-2" attributes="0"/>
+                              <Component id="drumsReverbPanel" alignment="0" min="87" pref="87" max="-2" attributes="0"/>
+                              <Component id="drumsVelocityPanel" alignment="0" pref="87" max="32767" attributes="0"/>
+                              <Component id="drumsChorusPanel" min="87" pref="87" max="-2" attributes="0"/>
                           </Group>
                           <EmptySpace max="-2" attributes="0"/>
                           <Group type="103" groupAlignment="0" attributes="0">
@@ -2974,7 +2974,7 @@
                                   <Component id="drumsMaxNoteLabel" alignment="3" min="-2" max="-2" attributes="0"/>
                                   <Component id="drumsMaxNoteSpinner" linkSize="14" alignment="3" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="26" max="32767" attributes="0"/>
+                              <EmptySpace max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -3097,7 +3097,7 @@
                                   <Component id="drumsMaxMidiEffectLabel" alignment="3" min="-2" max="-2" attributes="0"/>
                                   <Component id="drumsMaxMidiEffectSpinner" linkSize="16" alignment="3" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="26" max="32767" attributes="0"/>
+                              <EmptySpace max="32767" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -3270,7 +3270,7 @@
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="0" attributes="0">
                       <EmptySpace max="-2" attributes="0"/>
-                      <Component id="drumkitsPanel" pref="355" max="32767" attributes="0"/>
+                      <Component id="drumkitsPanel" pref="360" max="32767" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                   </Group>
               </Group>

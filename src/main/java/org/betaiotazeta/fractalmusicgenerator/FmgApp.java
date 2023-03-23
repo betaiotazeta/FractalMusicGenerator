@@ -16,9 +16,9 @@
  */
 package org.betaiotazeta.fractalmusicgenerator;
 
-//import com.aparapi.device.Device;
 //import com.formdev.flatlaf.FlatLightLaf;
 //import com.formdev.flatlaf.FlatDarkLaf;
+import com.aparapi.Kernel;
 import com.formdev.flatlaf.FlatDarculaLaf;
 import java.awt.Color;
 import java.awt.Image;
@@ -53,8 +53,8 @@ public class FmgApp extends javax.swing.JFrame {
 
     public FmgApp() {
         initComponents();
-//        device = Device.best();
         kernel = new AKernel();
+        if (executionModeExitCode == 2) kernel.setExecutionMode(Kernel.EXECUTION_MODE.JTP);
         audioExecutorService = Executors.newCachedThreadPool();
         fractalExecutorService = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<Runnable>(1), new ThreadPoolExecutor.DiscardOldestPolicy());
@@ -80,14 +80,17 @@ public class FmgApp extends javax.swing.JFrame {
             @Override
             public void windowOpened(WindowEvent windowEvent) {
                 colorPanel.applyPreset(colorPanel.WIKIPATTERN);
-                String renderer = "Graphics: " + kernel.getTargetDevice().getShortDescription();
+                String renderer;
+                if (executionModeExitCode == 0) {
+                    renderer = "Graphics: " + kernel.getTargetDevice().getShortDescription();
+                } else {
+                    renderer = "Graphics: Java Thread Pool";
+                }
                 gpuInfoLabel.setText(renderer);
             }
             
             @Override
             public void windowClosing(WindowEvent windowEvent) {
-                DonateDialog dialog = new DonateDialog(FmgApp.this, true);
-                dialog.setVisible(true);
                 String title = "Closing Application";
                 String message = "Really quit?" + nl;
                 int reply = JOptionPane.showConfirmDialog(FmgApp.this, message, title, JOptionPane.YES_NO_OPTION);
@@ -3812,6 +3815,9 @@ public class FmgApp extends javax.swing.JFrame {
 
         //</editor-fold>
 
+        executionModeExitCode = Utilities.testExecutionMode();
+        System.out.println("ExecutionModeExitCode is: " + executionModeExitCode);
+        
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -3820,12 +3826,7 @@ public class FmgApp extends javax.swing.JFrame {
         });
     }
 
-    // Getters
-    
-//    public Device getDevice() {
-//        return device;
-//    }
-    
+    // Getters  
     public AKernel getKernel() {
         return kernel;
     }
@@ -4514,7 +4515,7 @@ public class FmgApp extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
 
     // Custom variables
-//    private Device device;
+    static private int executionModeExitCode;
     private AKernel kernel;
     private ExecutorService audioExecutorService;
     private ExecutorService fractalExecutorService;

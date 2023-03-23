@@ -26,17 +26,14 @@ public class RenderManager {
             histogram = 1;
         }
         int bailout = 1000;
-        if (smooth == 1 && histogram == 1) {
+        if (smooth != 1 && histogram != 1) {
             bailout = 4;
         }
-        // using Device is an optional way to customize Aparapi
-//        Device device = fmgApp.getDevice();
+
         AKernel kernel = fmgApp.getKernel();
         // iterCountFreqArray needs to be sychronized, not supported in Aparapi, no need to pass it in 
         kernel.setupKernel(iterCountArray, imageArray, colorsArray, maxImageIterations,
                 width, height, minA, maxA, minB, maxB, fractalIndex, smooth, histogram, bailout);
-//        Range range = device.createRange(width * height);
-//        kernel.execute(range);
         kernel.execute(Range.create(width * height));
 
         if (histogram == 1) {

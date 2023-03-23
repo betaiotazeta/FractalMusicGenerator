@@ -2,6 +2,8 @@ package org.betaiotazeta.fractalmusicgenerator;
 
 import java.io.InputStream;
 import javax.swing.JOptionPane;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.text.html.HTMLEditorKit;
 
 public class AboutDialog extends javax.swing.JDialog {
@@ -63,21 +65,36 @@ public class AboutDialog extends javax.swing.JDialog {
     public void prepareDialog() {
         try {
             InputStream inputStream = getClass().getResourceAsStream("/org/betaiotazeta/fractalmusicgenerator/text/about.html");
-            aboutEditorPane.setEditable(false);
             aboutEditorPane.setEditorKit(new HTMLEditorKit());
             aboutEditorPane.read(inputStream, null);
         } catch (Exception ex) {
             String message = ex.toString();
             JOptionPane.showMessageDialog(fmgApp, message, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+               
+        aboutEditorPane.setEditable(false);
+        aboutEditorPane.addHyperlinkListener(new HyperlinkListener() {
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e) {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        java.awt.Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (Exception ex) {
+                        String message = ex.toString();
+                        JOptionPane.showMessageDialog(fmgApp, message, "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        });
     }
-    
+                            
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JEditorPane aboutEditorPane;
     private javax.swing.JScrollPane aboutScrollPane;
     private javax.swing.JLabel bannerLabel;
     // End of variables declaration//GEN-END:variables
 
-    // Variables
+    // Custom variables
     private FmgApp fmgApp;
 }
