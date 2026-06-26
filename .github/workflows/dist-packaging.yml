@@ -1,0 +1,328 @@
+name: Distribution Packaging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  java:
+    name: Java Fat JAR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Build fat JAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mvn -B clean package
+
+      - name: Package Java distribution
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          mkdir -p build/staging
+          cp target/FractalMusicGenerator-*.jar build/staging/
+
+          JAR_PATH="$(find build/staging -maxdepth 1 -name '*.jar' | head -n 1)"
+          JAR_FILENAME="$(basename "$JAR_PATH")"
+          APP_VERSION="${JAR_FILENAME%.jar}"
+          APP_VERSION="${APP_VERSION##*-}"
+
+          mkdir -p build/staging/{midi,projects,soundfonts}
+          cp LICENSE build/staging/License.txt
+
+          cp packaging/icons/fmg_icon.png build/staging/
+          cp packaging/icons/fmg_icon.ico build/staging/
+          cp packaging/icons/fmg_icon.icns build/staging/
+
+          cp packaging/scripts/java/start.sh build/staging/
+          chmod +x build/staging/start.sh
+          cp packaging/scripts/java/start.bat build/staging/
+
+          (
+            cd build/staging
+            zip -r "../../FractalMusicGenerator-${APP_VERSION}-Java.zip" .
+          )
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-fat-jar
+          path: FractalMusicGenerator-*-Java.zip
+          retention-days: 1
+
+  linux:
+    name: Linux App Image
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Build fat JAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mvn -B clean package
+
+      - name: Create Linux app-image
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          mkdir -p build/inputDir
+          cp target/FractalMusicGenerator-*.jar build/inputDir/
+
+          JAR_FILENAME="$(basename "$(find build/inputDir -maxdepth 1 -name '*.jar' | head -n 1)")"
+          APP_VERSION="${JAR_FILENAME%.jar}"
+          APP_VERSION="${APP_VERSION##*-}"
+
+          jpackage \
+            --type app-image \
+            --name FractalMusicGenerator \
+            --app-version "$APP_VERSION" \
+            --input build/inputDir \
+            --main-jar "$JAR_FILENAME" \
+            --jlink-options "--compress=zip-6 --strip-native-commands --strip-debug --no-man-pages --no-header-files" \
+            --add-modules java.base,java.desktop,java.logging,java.sql,java.xml,jdk.unsupported \
+            --description "Fractal Music Generator - an application for creating audio and midi music from fractals." \
+            --vendor BetaZeta \
+            --copyright BetaZeta \
+            --icon packaging/icons/fmg_icon.png \
+            --dest build/outputDir
+
+          mkdir -p build/outputDir/FractalMusicGenerator/{midi,projects,soundfonts}
+          cp LICENSE build/outputDir/FractalMusicGenerator/License.txt
+
+          ln -s lib/FractalMusicGenerator.png \
+            build/outputDir/FractalMusicGenerator/launcher-icon.png
+
+          cp packaging/scripts/linux/start.sh build/outputDir/FractalMusicGenerator/
+          chmod +x build/outputDir/FractalMusicGenerator/start.sh
+
+          (
+            cd build/outputDir
+            zip -r "../../FractalMusicGenerator-${APP_VERSION}-Linux.zip" \
+              FractalMusicGenerator
+          )
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-app-image
+          path: FractalMusicGenerator-*-Linux.zip
+          retention-days: 1
+
+  windows:
+    name: Windows App Image
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Build fat JAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mvn -B clean package
+
+      - name: Create Windows app-image
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          mkdir -p build/inputDir
+          cp target/FractalMusicGenerator-*.jar build/inputDir/
+
+          JAR_FILENAME="$(basename "$(find build/inputDir -maxdepth 1 -name '*.jar' | head -n 1)")"
+          APP_VERSION="${JAR_FILENAME%.jar}"
+          APP_VERSION="${APP_VERSION##*-}"
+
+          # jpackage on Windows accepts forward slashes in paths when run from GitHub Bash
+          jpackage \
+            --type app-image \
+            --name FractalMusicGenerator \
+            --app-version "$APP_VERSION" \
+            --input build/inputDir \
+            --main-jar "$JAR_FILENAME" \
+            --jlink-options "--compress=zip-6 --strip-native-commands --strip-debug --no-man-pages --no-header-files" \
+            --add-modules java.base,java.desktop,java.logging,java.sql,java.xml,jdk.unsupported \
+            --description "Fractal Music Generator - an application for creating audio and midi music from fractals." \
+            --vendor BetaZeta \
+            --copyright BetaZeta \
+            --icon packaging/icons/fmg_icon.ico \
+            --dest build/outputDir
+
+          mkdir -p build/outputDir/FractalMusicGenerator/{midi,projects,soundfonts}
+          cp LICENSE build/outputDir/FractalMusicGenerator/License.txt
+
+          (
+            cd build/outputDir
+            powershell.exe -Command \
+              "Compress-Archive -Path FractalMusicGenerator -DestinationPath ..\\..\\FractalMusicGenerator-${APP_VERSION}-Windows.zip -Force"
+          )
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app-image
+          path: FractalMusicGenerator-*-Windows.zip
+          retention-days: 1
+
+  macos-intel:
+    name: macOS Intel App Image
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Build fat JAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mvn -B clean package
+
+      - name: Create macOS Intel app-image
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          mkdir -p build/inputDir
+          cp target/FractalMusicGenerator-*.jar build/inputDir/
+
+          JAR_FILENAME="$(basename "$(find build/inputDir -maxdepth 1 -name '*.jar' | head -n 1)")"
+          APP_VERSION="${JAR_FILENAME%.jar}"
+          APP_VERSION="${APP_VERSION##*-}"
+
+          jpackage \
+            --type app-image \
+            --name FractalMusicGenerator \
+            --app-version "$APP_VERSION" \
+            --input build/inputDir \
+            --main-jar "$JAR_FILENAME" \
+            --jlink-options "--compress=zip-6 --strip-native-commands --strip-debug --no-man-pages --no-header-files" \
+            --add-modules java.base,java.desktop,java.logging,java.sql,java.xml,jdk.unsupported \
+            --description "Fractal Music Generator - an application for creating audio and midi music from fractals." \
+            --vendor BetaZeta \
+            --copyright BetaZeta \
+            --icon packaging/icons/fmg_icon.icns \
+            --mac-package-identifier FractalMusicGenerator \
+            --mac-package-name FractalMusicGenerator \
+            --dest build/outputDir
+
+          mkdir -p build/outputDir/{midi,projects,soundfonts}
+          cp LICENSE build/outputDir/License.txt
+
+          mv build/outputDir build/FractalMusicGenerator
+
+          (
+            cd build
+            zip -r "../FractalMusicGenerator-${APP_VERSION}-Mac-x86-64.zip" \
+              FractalMusicGenerator
+          )
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-intel-app-image
+          path: FractalMusicGenerator-*-Mac-x86-64.zip
+          retention-days: 1
+
+  macos-arm:
+    name: macOS Apple Silicon App Image
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Build fat JAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mvn -B clean package
+
+      - name: Create macOS Apple Silicon app-image
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          mkdir -p build/inputDir
+          cp target/FractalMusicGenerator-*.jar build/inputDir/
+
+          JAR_FILENAME="$(basename "$(find build/inputDir -maxdepth 1 -name '*.jar' | head -n 1)")"
+          APP_VERSION="${JAR_FILENAME%.jar}"
+          APP_VERSION="${APP_VERSION##*-}"
+
+          jpackage \
+            --type app-image \
+            --name FractalMusicGenerator \
+            --app-version "$APP_VERSION" \
+            --input build/inputDir \
+            --main-jar "$JAR_FILENAME" \
+            --jlink-options "--compress=zip-6 --strip-native-commands --strip-debug --no-man-pages --no-header-files" \
+            --add-modules java.base,java.desktop,java.logging,java.sql,java.xml,jdk.unsupported \
+            --description "Fractal Music Generator - an application for creating audio and midi music from fractals." \
+            --vendor BetaZeta \
+            --copyright BetaZeta \
+            --icon packaging/icons/fmg_icon.icns \
+            --mac-package-identifier FractalMusicGenerator \
+            --mac-package-name FractalMusicGenerator \
+            --dest build/outputDir
+
+          mkdir -p build/outputDir/{midi,projects,soundfonts}
+          cp LICENSE build/outputDir/License.txt
+
+          mv build/outputDir build/FractalMusicGenerator
+
+          (
+            cd build
+            zip -r "../FractalMusicGenerator-${APP_VERSION}-Mac-arm-64.zip" \
+              FractalMusicGenerator
+          )
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm-app-image
+          path: FractalMusicGenerator-*-Mac-arm-64.zip
+          retention-days: 1

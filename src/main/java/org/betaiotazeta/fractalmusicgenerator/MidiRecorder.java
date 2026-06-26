@@ -81,8 +81,12 @@ public class MidiRecorder {
             message = "The generated Midi file may contain errors!";
             JOptionPane.showMessageDialog(fmgApp, message, "Warning", JOptionPane.WARNING_MESSAGE);
         }
-        
+  
         File dataDir = new File("midi");
+        File dataDirMacAppImage = Utilities.findFileForMacAppImage("midi");
+        if (dataDirMacAppImage != null) {
+            dataDir = dataDirMacAppImage;
+        }
         JFileChooser chooser = new JFileChooser(dataDir);
         FileNameExtensionFilter filter = new FileNameExtensionFilter("MIDI Files", "mid");
         chooser.setFileFilter(filter);

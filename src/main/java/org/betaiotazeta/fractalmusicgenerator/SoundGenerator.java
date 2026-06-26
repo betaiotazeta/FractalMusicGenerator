@@ -809,8 +809,8 @@ public class SoundGenerator {
     private HashMap<Sequencer, Integer> seqChanHashMap = new HashMap<>();
     private int maxSDL = 1;
     private int occupiedSDL;
-    private boolean requestedSDL;
-    private SourceDataLine sdlCheck;
+    private volatile boolean requestedSDL; // if true, new incoming threads are rejected
+    private volatile SourceDataLine sdlCheck; // recover requested currently playing SDL
     private final Object lineMonitor = new Object();
     private final Object melodyMonitor = new Object();
     private final Object drumsMonitor = new Object();

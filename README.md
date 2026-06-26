@@ -56,19 +56,19 @@ A downloadable cross-platform **application** for creating *polyphonic* **audio*
   - Play a fractal on your keyboard
 - Virtual midi devices
   - Connect to DAWs
-- GPU accelerated fractal rendering
-  - Smoothing, histogram, various fractals
-- Simple code  
+- Rendering with color smoothing or histogram
+  - Various fractals available
+- Simple code
 
 * * *
 
 # Known Issues
 
-- GPU acceleration requires OpenCL
-  - GUI will report if a GPU is available: fallback to CPU otherwise
+- GPU acceleration has been removed from version 1.1.0 onward
+  - Increased hardware compatibility across supported platforms
 - The built-in soundfont is of different quality for different platforms
   - Please load a high quality one (DLS or SF2 format)​
-  - For this reason the built-in presets cannot always be optimized​
+  - For this reason the built-in presets cannot always be optimized
 - The application can be fully used in standalone mode but it is intended as a source for DAWs​
   - Requires LoopBe1 or VirtualMidiSynth or Virmidi as virtual devices
 - Arm-based Mac support is untested
@@ -87,19 +87,14 @@ All donations go to the project maintainer, BetaZeta.
 
 # Dependencies
 
-[**Aparapi**:](https://aparapi.com/)
-A framework for executing native Java code on the GPU.
-Originally a project conceived and developed by AMD corporation.
-2016 - present Syncleus.
+[**Flatlaf**:](https://www.formdev.com/flatlaf/)
+FlatLaf is a modern open-source cross-platform Look and Feel for Java Swing desktop applications.
 
 [**XStream**:](https://x-stream.github.io/)
 A library to serialize objects to XML and back again.
 
 [**Jnajack**:](https://github.com/jaudiolibs/jnajack)
 Java bindings to JACK Audio Connection Kit. Neil C Smith.
-
-[**Flatlaf**:](https://www.formdev.com/flatlaf/)
-FlatLaf is a modern open-source cross-platform Look and Feel for Java Swing desktop applications.
 
 
 ## Additional code

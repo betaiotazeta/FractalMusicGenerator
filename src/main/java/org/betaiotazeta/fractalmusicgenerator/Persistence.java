@@ -22,6 +22,10 @@ public class Persistence {
 
     public void open() {
         File dataDir = new File("projects");
+        File dataDirMacAppImage = Utilities.findFileForMacAppImage("projects");
+        if (dataDirMacAppImage != null) {
+            dataDir = dataDirMacAppImage;
+        }
         JFileChooser chooser = new JFileChooser(dataDir);
         FileNameExtensionFilter filter = new FileNameExtensionFilter("XML Files", "xml");
         chooser.setFileFilter(filter);
@@ -68,6 +72,10 @@ public class Persistence {
     public void save() {
         fmgApp.updateConfiguratorFromGui();
         File dataDir = new File("projects");
+        File dataDirMacAppImage = Utilities.findFileForMacAppImage("projects");
+        if (dataDirMacAppImage != null) {
+            dataDir = dataDirMacAppImage;
+        }
         JFileChooser chooser = new JFileChooser(dataDir);
         FileNameExtensionFilter filter = new FileNameExtensionFilter("XML Files", "xml");
         chooser.setFileFilter(filter);

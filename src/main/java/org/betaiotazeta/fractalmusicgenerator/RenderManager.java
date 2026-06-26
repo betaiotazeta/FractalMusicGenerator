@@ -1,85 +1,98 @@
 package org.betaiotazeta.fractalmusicgenerator;
 
-import com.aparapi.Range;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 public class RenderManager {
 
     public RenderManager(FmgApp fmgApp) {
         this.fmgApp = fmgApp;
+        this.kernel = fmgApp.getKernel();
+        this.renderExecutorService = fmgApp.getRenderExecutorService();
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) renderExecutorService;
+        this.workerCount = executor.getCorePoolSize();
     }
 
     public void render(FractalPanel fractalPanel, int[] colorsArray, int maxImageIterations,
             int width, int height, double minA, double maxA, double minB, double maxB) throws InterruptedException {
         BufferedImage imageFractal = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         final int[] imageArray = ((DataBufferInt) imageFractal.getRaster().getDataBuffer()).getData();
-        double[][] iterCountArray = new double[width][height];
-        int[] iterCountFreqArray = new int[maxImageIterations + 1];
+        float[] iterCountArray = new float[width * height];
         int fractalIndex = fmgApp.getConfigurator().getFractalIndex();
-        int smooth = 0;
-        if (fmgApp.getSmoothCheckBox().isSelected()) {
-            smooth = 1;
-        }
-        int histogram = 0;
-        if (fmgApp.getHistogramCheckBox().isSelected()) {
-            histogram = 1;
-        }
-        int bailout = 1000;
-        if (smooth != 1 && histogram != 1) {
-            bailout = 4;
-        }
+        int smooth = fmgApp.getSmoothCheckBox().isSelected() ? 1 : 0;
+        int histogram = fmgApp.getHistogramCheckBox().isSelected() ? 1 : 0;
+        int bailout = (smooth == 0 && histogram == 0) ? 4 : 1000;
 
-        AKernel kernel = fmgApp.getKernel();
-        // iterCountFreqArray needs to be sychronized, not supported in Aparapi, no need to pass it in 
-        kernel.setupKernel(iterCountArray, imageArray, colorsArray, maxImageIterations,
-                width, height, minA, maxA, minB, maxB, fractalIndex, smooth, histogram, bailout);
-        kernel.execute(Range.create(width * height));
-
+        LongAdder[] iterCountFreqArray = null;
         if (histogram == 1) {
-            // HISTOGRAM
+            iterCountFreqArray = new LongAdder[maxImageIterations + 1];
+            for (int i = 0; i < iterCountFreqArray.length; i++) {
+                iterCountFreqArray[i] = new LongAdder();
+            }
+        }
+
+        kernel.setupKernel(iterCountArray, iterCountFreqArray, imageArray, colorsArray, maxImageIterations,
+                width, height, minA, maxA, minB, maxB, fractalIndex, smooth, histogram, bailout);
+
+        final int totalPixels = width * height;
+        final AtomicInteger nextIndex = new AtomicInteger(0);
+        final int chunkSize = 256;
+        final CountDownLatch doneSignal = new CountDownLatch(workerCount);
+
+        for (int idx = 0; idx < workerCount; idx++) {
+            renderExecutorService.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        int start;
+                        while ((start = nextIndex.getAndAdd(chunkSize)) < totalPixels) {
+                            int end = start + chunkSize;
+                            if (end > totalPixels) {
+                                end = totalPixels;
+                            }
+                            for (int gid = start; gid < end; gid++) {
+                                kernel.renderPixel(gid);
+                            }
+                        }
+                    } finally {
+                        doneSignal.countDown();
+                    }
+                }
+            });
+        }
+
+        doneSignal.await();
+
+        // HISTOGRAM
+        if (histogram == 1) {
             // *) iterCountArray:
-            // bidimensional, contains iteration count for every pixel
+            // contains iteration count for every pixel
             // *) iterCountFreqArray:
             // index: amount of iterations performed
             // value: quantity of pixels escaping with index amount of iterations
             // *) percentCountArray;
             // index: amount of iterations performed
             // value: percentage of pixels escaped with the amount of iterations performed
-            // *) percentageArray[i][j]: NOT USED
-            // value: percentage of pixels escaped with the amount of iterations performed for the pixel
             // range 0 - 1
+            double total = 0d; // would be width*height if inSet pixels were included (maxImageIterations +1)
 
-            // we can avoid synchronization in AKernel if we do this here
-            for (int i = 0; i < width; i++) {
-                for (int j = 0; j < height; j++) {
-                    int index = (int) iterCountArray[i][j];
-                    iterCountFreqArray[index]++;
-                }
-            }
-
-            double total = 0d; // would be width*height if inSet pixels were included (maxImagIter +1)
             for (int i = 0; i < maxImageIterations; i++) {
-                total = total + iterCountFreqArray[i];
+                total = total + iterCountFreqArray[i].sum();
             }
 
-            // NOT USED
-//            double[][] percentageArray = new double[width][height];
-//            for (int i = 0; i < width; i++) {
-//                for (int j = 0; j < height; j++) {
-//                    int iterCount = (int) iterCountArray[i][j];
-//                    // total percentage up to iterCount
-//                    for (int k = 0; k <= iterCount; k++) {
-//                        // must be floating-point division
-//                        percentageArray[i][j] += iterCountFreqArray[k] / total;
-//                    }
-//                }
-//            }
+            if (total <= 0d) {
+                total = 1d;
+            }
 
             double[] percentCountArray = new double[maxImageIterations + 1];
-            percentCountArray[0] = (iterCountFreqArray[0] / total);
+            percentCountArray[0] = iterCountFreqArray[0].sum() / total;
             for (int i = 1; i < maxImageIterations; i++) {
-                percentCountArray[i] = percentCountArray[i - 1] + (iterCountFreqArray[i] / total);
+                percentCountArray[i] = percentCountArray[i - 1] + (iterCountFreqArray[i].sum() / total);
                 if (percentCountArray[i] >= 1) {
                     percentCountArray[i] = 0.999999999999; // 1 means inSet
                 }
@@ -93,46 +106,30 @@ public class RenderManager {
                 percentCountArray[i] = (1.0 - Math.pow(1.0 - percentCountArray[i], 1.0 / density)) * 100; // 100 palette length
             }
 
-            int index = 0;
-            for (int j = 0; j < height; j++) {
-                for (int i = 0; i < width; i++) {
-                    // interpolation
-                    double countD = iterCountArray[i][j];
-                    if (countD < maxImageIterations) {
-                        double fraction = countD % 1; // fractional part
+            // copy the last bucket: fall back to the last valid entry
+            percentCountArray[maxImageIterations] = percentCountArray[maxImageIterations - 1];
 
-                        int color1 = colorsArray[(int) percentCountArray[(int) countD]];
-                        int color2 = colorsArray[(int) percentCountArray[(int) countD + 1]];
-
-                        // color3 = linearInterpolate(color1, color2, fraction)
-                        int red1 = (color1 >> 16) & 0xFF;
-                        int green1 = (color1 >> 8) & 0xFF;
-                        int blue1 = color1 & 0xFF;
-                        int red2 = (color2 >> 16) & 0xFF;
-                        int green2 = (color2 >> 8) & 0xFF;
-                        int blue2 = color2 & 0xFF;
-
-                        int red3 = (int) ((red2 - red1) * fraction + red1);
-                        int green3 = (int) ((green2 - green1) * fraction + green1);
-                        int blue3 = (int) ((blue2 - blue1) * fraction + blue1);
-
-                        int color3 = red3;
-                        color3 = (color3 << 8) + green3;
-                        color3 = (color3 << 8) + blue3;
-
-                        imageArray[index] = color3;
-                    } else {
-                        imageArray[index] = colorsArray[100]; // 100 palette length
-                    }
-                    index++;
+            for (int gid = 0; gid < totalPixels; gid++) {
+                float countF = iterCountArray[gid];
+                if (countF < maxImageIterations) {
+                    double fraction = countF % 1;
+                    int bucket = (int) countF;
+                    int color1 = colorsArray[(int) percentCountArray[bucket]];
+                    int color2 = colorsArray[(int) percentCountArray[bucket + 1]];
+                    imageArray[gid] = FractalKernel.interpolateColor(color1, color2, fraction);
+                } else {
+                    imageArray[gid] = colorsArray[100]; // 100 palette length
                 }
             }
         }
 
         fractalPanel.setImageFractal(imageFractal);
-        fmgApp.getFractalPanel().repaint();
+        fractalPanel.repaint();
     }
 
     // Custom variables
-    private FmgApp fmgApp;
+    private final FmgApp fmgApp;
+    private final FractalKernel kernel;
+    private final ExecutorService renderExecutorService;
+    private final int workerCount;
 }

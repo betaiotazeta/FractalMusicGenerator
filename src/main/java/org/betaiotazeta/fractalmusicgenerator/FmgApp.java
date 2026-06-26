@@ -18,12 +18,17 @@ package org.betaiotazeta.fractalmusicgenerator;
 
 //import com.formdev.flatlaf.FlatLightLaf;
 //import com.formdev.flatlaf.FlatDarkLaf;
-import com.aparapi.Kernel;
 import com.formdev.flatlaf.FlatDarculaLaf;
+//import com.formdev.flatlaf.themes.FlatMacLightLaf;
+import com.formdev.flatlaf.themes.FlatMacDarkLaf;
+import com.formdev.flatlaf.util.SystemInfo;
 import java.awt.Color;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -39,6 +44,7 @@ import javax.sound.sampled.SourceDataLine;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JList;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButton;
 import javax.swing.JSlider;
@@ -53,15 +59,16 @@ public class FmgApp extends javax.swing.JFrame {
 
     public FmgApp() {
         initComponents();
-        kernel = new AKernel();
-        if (executionModeExitCode == 2) kernel.setExecutionMode(Kernel.EXECUTION_MODE.JTP);
-        audioExecutorService = Executors.newCachedThreadPool();
+        Utilities.setupMacGuiExtra(this);        
         fractalExecutorService = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<Runnable>(1), new ThreadPoolExecutor.DiscardOldestPolicy());
+        renderExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        audioExecutorService = Executors.newCachedThreadPool();
         cfg = new Configurator();
+        persistence = new Persistence(this);
+        kernel = new FractalKernel();
         renderManager = new RenderManager(this);
         soundGenerator = new SoundGenerator(this);
-        persistence = new Persistence(this);
         soundbankManager = new SoundbankManager(this);
         deviceManager = new DeviceManager(this);
         updateConfiguratorFromGui();
@@ -80,28 +87,32 @@ public class FmgApp extends javax.swing.JFrame {
             @Override
             public void windowOpened(WindowEvent windowEvent) {
                 colorPanel.applyPreset(colorPanel.WIKIPATTERN);
-                String renderer;
-                if (executionModeExitCode == 0) {
-                    renderer = "Graphics: " + kernel.getTargetDevice().getShortDescription();
+                gpuInfoLabel.setText("Graphics: Java CPU Renderer");
+
+                // startup confirmation to STDOUT
+                System.out.println("Fractal Music Generator started successfully.");
+                // HiDPI info
+                GraphicsConfiguration gc = GraphicsEnvironment
+                    .getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
+                AffineTransform tx = gc.getDefaultTransform();
+                Double scaleX = tx.getScaleX();
+                Double scaleY = tx.getScaleY();
+                tab1TextArea.append("Display scale factor: X=" + scaleX + ", Y=" + scaleY + nl);
+                if ((scaleX > 1) || (scaleY > 1)) {
+                    tab1TextArea.append("HiDPI mode detected." + nl);
                 } else {
-                    renderer = "Graphics: Java Thread Pool";
+                    tab1TextArea.append(
+                        "Normal DPI mode detected." + nl +
+                        "If you are using a HiDPI display, scaling may not have been enabled at startup." + nl);
                 }
-                gpuInfoLabel.setText(renderer);
             }
             
             @Override
             public void windowClosing(WindowEvent windowEvent) {
-                String title = "Closing Application";
-                String message = "Really quit?" + nl;
-                int reply = JOptionPane.showConfirmDialog(FmgApp.this, message, title, JOptionPane.YES_NO_OPTION);
-                if (reply == JOptionPane.NO_OPTION) {
-                    return;
+                  if (requestQuit()) {
+                    dispose();
+                    System.exit(0);
                 }
-                persistence.saveOnExit();
-                kernel.dispose();
-                resetSound();
-                deviceManager.closeAll();
-                System.exit(0);
             }
         });
     }
@@ -3438,6 +3449,22 @@ public class FmgApp extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_youtubeMenuItemActionPerformed
 
+    public boolean requestQuit() {
+        String title = "Closing Application";
+        String message = "Really quit?" + nl;
+        int reply = JOptionPane.showConfirmDialog(FmgApp.this, message, title, JOptionPane.YES_NO_OPTION);
+        if (reply == JOptionPane.NO_OPTION) {
+            return false;
+        }
+        persistence.saveOnExit();
+        resetSound();
+        deviceManager.closeAll();
+        fractalExecutorService.shutdownNow();
+        renderExecutorService.shutdownNow();
+        audioExecutorService.shutdownNow();
+        return true;
+    }
+
     public void resetSound() {
         String message = "Starting reset..." + nl;
         tab1TextArea.append(message);
@@ -3809,14 +3836,27 @@ public class FmgApp extends javax.swing.JFrame {
     public static void main(String args[]) {
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code ">
 
-//        FlatLightLaf.setup();
-//        FlatDarkLaf.setup();
-        FlatDarculaLaf.setup();
-
+        if (SystemInfo.isMacOS) {
+            // Ensure the window title bar matches the system dark/light mode
+            System.setProperty("apple.awt.application.appearance", "system");
+            // Set the application name shown in the screen menu bar
+            System.setProperty("apple.awt.application.name", "Fractal Music Generator");
+            // Move menu bar to the top of the screen (native macOS behavior)
+            System.setProperty("apple.laf.useScreenMenuBar", "true");
+            if (Utilities.isMacDarkMode()) {
+                FlatMacDarkLaf.setup();
+            } else {
+                // We have white icons: they do not do well on white background
+                // FlatMacLightLaf.setup();
+                FlatMacDarkLaf.setup();
+            }
+        } else {
+            // FlatLightLaf.setup();
+            // FlatDarkLaf.setup();
+            FlatDarculaLaf.setup();
+        }
+        
         //</editor-fold>
-
-        executionModeExitCode = Utilities.testExecutionMode();
-        System.out.println("ExecutionModeExitCode is: " + executionModeExitCode);
         
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
@@ -3826,18 +3866,18 @@ public class FmgApp extends javax.swing.JFrame {
         });
     }
 
-    // Getters  
-    public AKernel getKernel() {
-        return kernel;
+    // Getters
+    public ExecutorService getFractalExecutorService() {
+        return fractalExecutorService;
+    }
+
+    public ExecutorService getRenderExecutorService() {
+        return renderExecutorService;
     }
 
     public ExecutorService getAudioExecutorService() {
         return audioExecutorService;
     }
-    
-    public ExecutorService getFractalExecutorService() {
-        return fractalExecutorService;
-    }    
 
     public Configurator getConfigurator() {
         return cfg;
@@ -3847,30 +3887,38 @@ public class FmgApp extends javax.swing.JFrame {
         this.cfg = cfg;
     }
 
-    public SoundGenerator getSoundGenerator() {
-        return soundGenerator;
-    }
-
     public Persistence getPersistence() {
         return persistence;
+    }
+
+    public FractalKernel getKernel() {
+        return kernel;
+    }
+
+    public RenderManager getRenderManager() {
+        return renderManager;
+    }
+    
+    public SoundGenerator getSoundGenerator() {
+        return soundGenerator;
     }
 
     public SoundbankManager getSoundbankManager() {
         return soundbankManager;
     }
-    
+
+    public DeviceManager getDeviceManager() {
+        return deviceManager;
+    }
+
     public FractalPanel getFractalPanel() {
         return fractalPanel;
     }
-    
+
     public ColorPanel getColorPanel() {
         return colorPanel;
     }
     
-    public RenderManager getRenderManager() {
-        return renderManager;
-    }
-
     public JSlider getMaxAudioIterationsSlider() {
         return maxAudioIterationsSlider;
     }
@@ -4118,10 +4166,6 @@ public class FmgApp extends javax.swing.JFrame {
     public JList<String> getInstrumentsMelodyList() {
         return instrumentsMelodyList;
     }
-   
-    public DeviceManager getDeviceManager() {
-        return deviceManager;
-    }
 
     public JTable getExternalDevicesTable() {
         return externalDevicesTable;
@@ -4282,7 +4326,11 @@ public class FmgApp extends javax.swing.JFrame {
     public JToggleButton getRecorderToggleButton() {
         return recorderToggleButton;
     }
-
+    
+    public JMenuItem getAboutMenuItem() {
+        return aboutMenuItem;
+    }
+ 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JMenuItem aboutMenuItem;
     private javax.swing.JPanel audioIterationPanel;
@@ -4515,16 +4563,16 @@ public class FmgApp extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
 
     // Custom variables
-    static private int executionModeExitCode;
-    private AKernel kernel;
-    private ExecutorService audioExecutorService;
     private ExecutorService fractalExecutorService;
+    private ExecutorService renderExecutorService;
+    private ExecutorService audioExecutorService;
     private Configurator cfg;
-    private SoundGenerator soundGenerator;
     private Persistence persistence;
+    private FractalKernel kernel;
+    private RenderManager renderManager;
+    private SoundGenerator soundGenerator;
     private SoundbankManager soundbankManager;
     private DeviceManager deviceManager;
-    private RenderManager renderManager;
     private String nl = System.lineSeparator();
     private int toolTipDismissDelay = Integer.MAX_VALUE;  // 4000
     private Timer timer;

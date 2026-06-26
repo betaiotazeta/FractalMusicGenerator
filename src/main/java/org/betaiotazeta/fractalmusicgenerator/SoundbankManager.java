@@ -55,6 +55,10 @@ public class SoundbankManager {
         Soundbank soundbank;
         File inputSoundfontFile;
         File dataDir = new File("soundfonts");
+        File dataDirMacAppImage = Utilities.findFileForMacAppImage("soundfonts");
+        if (dataDirMacAppImage != null) {
+            dataDir = dataDirMacAppImage;
+        }
         JFileChooser chooser = new JFileChooser(dataDir);
         FileNameExtensionFilter filter = new FileNameExtensionFilter("SF2 Files", "sf2");
         chooser.setFileFilter(filter);

@@ -1,7 +1,16 @@
 package org.betaiotazeta.fractalmusicgenerator;
 
-import com.aparapi.Kernel;
-import com.aparapi.Range;
+import com.formdev.flatlaf.util.SystemInfo;
+import java.awt.Desktop;
+import java.awt.desktop.AboutEvent;
+import java.awt.desktop.AboutHandler;
+import java.awt.desktop.QuitEvent;
+import java.awt.desktop.QuitHandler;
+import java.awt.desktop.QuitResponse;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Optional;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
@@ -48,78 +57,85 @@ public class Utilities {
 
         });
     }
-    
-    public static int testExecutionMode() {
-        float checkValue = 0;
-        final float[] firstArray = {1, 2, 3};
-        final float[] secondArray = {4, 5, 6};
-        // first and second array length must be the same
-        final float[] calculatedArray = new float[firstArray.length];
 
-        Kernel kernel = new Kernel() {
-            @Override
-            public void run() {
-                int gid = getGlobalId();
-                calculatedArray[gid] = firstArray[gid] + secondArray[gid];
-            }
-        };
-
-        Range range = Range.create(calculatedArray.length);
-
-        kernel.setExecutionMode(Kernel.EXECUTION_MODE.GPU);
+    public static boolean isMacDarkMode() {
         try {
-            System.out.println("Testing GPU execution mode...");
-            kernel.execute(range);
+            Process process = new ProcessBuilder("defaults", "read", "-g", "AppleInterfaceStyle").start();
+            return process.waitFor() == 0;
         } catch (Exception ex) {
-            String message = "Error, something went wrong while running Aparapi in GPU execution mode: ";
-            System.out.println(message + ex.getMessage());
+            return false;
         }
-        checkValue = calculatedArray[0] + calculatedArray[1] + calculatedArray[2];
-        System.out.println("Calculated GPU value is: " + checkValue);
-        if (checkValue == 21) { // 1+4 + 2+5 + 3+6
-            kernel.dispose();
-            return 0;
+    }
 
-        } else {
-            kernel.dispose();
-            kernel.setExecutionMode(Kernel.EXECUTION_MODE.AUTO);
-            try {
-                System.out.println("Testing AUTO execution mode...");
-                kernel.execute(range);
-                kernel.execute(range); // two times
-            } catch (Exception ex) {
-                String message = "Warning, exception while running Aparapi in AUTO execution mode: ";
-                System.out.println(message + ex.getMessage());
+    public static void setupMacGuiExtra(FmgApp fmgApp) {
+        if (SystemInfo.isMacOS) {
+            if (SystemInfo.isMacFullWindowContentSupported) {
+                // Enable transparent title bar
+                fmgApp.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
+                // Support full screen mode instead of just zoom (for Java 8 - 10; not necessary for Java 11+)
+                fmgApp.getRootPane().putClientProperty("apple.awt.fullscreenable", true);
             }
-            checkValue = calculatedArray[0] + calculatedArray[1] + calculatedArray[2];
-            System.out.println("Calculated AUTO value is: " + checkValue);
-            if (checkValue == 21) {
-                kernel.dispose();
-                return 1;
-
-            } else {
-                kernel.dispose();
-                kernel.setExecutionMode(Kernel.EXECUTION_MODE.JTP);
-                try {
-                    System.out.println("Testing JTP execution mode...");
-                    kernel.execute(range);
-                } catch (Exception ex) {
-                    String message = "Error, something went wrong while running Aparapi in JTP execution mode: ";
-                    System.out.println(message + ex.getMessage());
-                }
-                checkValue = calculatedArray[0] + calculatedArray[1] + calculatedArray[2];
-                System.out.println("Calculated JTP value is: " + checkValue);
-                if (checkValue == 21) {
-                    kernel.dispose();
-                    return 2;
-
-                } else {
-                    String message = "Error, cannot find a suitable execution mode!";
-                    System.out.println(message);
-                    kernel.dispose();
-                    return 3;
-                }
+            // MacOS adds an "Application menu" with: About, Preferences (hidden) and Quit.
+            // When screen (global) menu bar is enabled the app menu is also moved up.
+            // About dialog
+            Desktop desktop = Desktop.getDesktop();
+            if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
+                desktop.setAboutHandler(new AboutHandler() {
+                    @Override
+                    public void handleAbout(AboutEvent e) {
+                        AboutDialog dialog = new AboutDialog(fmgApp, true);
+                        dialog.setVisible(true);
+                    }
+                });
+                fmgApp.getAboutMenuItem().setVisible(false);
             }
+            // Quit
+            if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
+                desktop.setQuitHandler(new QuitHandler() {
+                    @Override
+                    public void handleQuitRequestWith(QuitEvent e, QuitResponse response) {
+                        if (fmgApp.requestQuit()) {
+                            // response.performQuit(); // Works, but we prefer only one shutdown mechanism
+                            response.cancelQuit(); // prevent AWT's default quit handling
+                            fmgApp.dispose();
+                            System.exit(0);
+                        } else {
+                            response.cancelQuit();
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    public static File findFileForMacAppImage(String folderName) {
+        if (!System.getProperty("os.name").toLowerCase().contains("mac")) {
+            return null;
+        }
+
+        try {
+            Optional<String> execPathnameOpt = ProcessHandle.current().info().command();
+            if (execPathnameOpt.isEmpty()) {
+                return null;
+            }
+            Path execPathname = Paths.get(execPathnameOpt.get());
+            // .../FractalMusicGenerator.app/Contents/MacOS/FractalMusicGenerator
+            Path macOsDir = execPathname.getParent();
+            if (macOsDir == null) {
+                return null;
+            }
+            Path contentsDir = macOsDir.getParent();
+            if (contentsDir == null) {
+                return null;
+            }
+            Path appBundle = contentsDir.getParent();
+            if ((appBundle == null) || (!appBundle.getFileName().toString().endsWith(".app"))) {
+                return null;
+            }
+            File dataDir = appBundle.resolveSibling(folderName).toFile();
+            return dataDir.isDirectory() ? dataDir : null;
+        } catch (Exception ex) {
+            return null;
         }
     }
 
