@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -58,7 +58,7 @@ jobs:
           )
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: java-fat-jar
           path: FractalMusicGenerator-*-Java.zip
@@ -66,11 +66,11 @@ jobs:
 
   linux:
     name: Linux App Image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -126,7 +126,7 @@ jobs:
           )
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-app-image
           path: FractalMusicGenerator-*-Linux.zip
@@ -138,7 +138,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -153,43 +153,44 @@ jobs:
           mvn -B clean package
 
       - name: Create Windows app-image
-        shell: bash
+        shell: pwsh
         run: |
-          set -euxo pipefail
+          New-Item -ItemType Directory build/inputDir -Force | Out-Null
+          New-Item -ItemType Directory build/outputDir -Force | Out-Null
 
-          mkdir -p build/inputDir
-          cp target/FractalMusicGenerator-*.jar build/inputDir/
+          Copy-Item target/FractalMusicGenerator-*.jar build/inputDir
 
-          JAR_FILENAME="$(basename "$(find build/inputDir -maxdepth 1 -name '*.jar' | head -n 1)")"
-          APP_VERSION="${JAR_FILENAME%.jar}"
-          APP_VERSION="${APP_VERSION##*-}"
+          $jar = Get-ChildItem build/inputDir/*.jar | Select-Object -First 1
+          $jarName = $jar.Name
+          $version = $jar.BaseName.Split('-')[-1]
 
-          # jpackage on Windows accepts forward slashes in paths when run from GitHub Bash
-          jpackage \
-            --type app-image \
-            --name FractalMusicGenerator \
-            --app-version "$APP_VERSION" \
-            --input build/inputDir \
-            --main-jar "$JAR_FILENAME" \
-            --jlink-options "--compress=zip-6 --strip-native-commands --strip-debug --no-man-pages --no-header-files" \
-            --add-modules java.base,java.desktop,java.logging,java.sql,java.xml,jdk.unsupported \
-            --description "Fractal Music Generator - an application for creating audio and midi music from fractals." \
-            --vendor BetaZeta \
-            --copyright BetaZeta \
-            --icon packaging/icons/fmg_icon.ico \
+          jpackage `
+            --type app-image `
+            --name FractalMusicGenerator `
+            --app-version $version `
+            --input build/inputDir `
+            --main-jar $jarName `
+            --add-modules java.base,java.desktop,java.logging,java.sql,java.xml,jdk.unsupported `
+            --jlink-options "--compress=zip-6 --strip-native-commands --strip-debug --no-man-pages --no-header-files" `
+            --description "Fractal Music Generator - an application for creating audio and midi music from fractals." `
+            --vendor BetaZeta `
+            --copyright BetaZeta `
+            --icon packaging/icons/fmg_icon.ico `
             --dest build/outputDir
 
-          mkdir -p build/outputDir/FractalMusicGenerator/{midi,projects,soundfonts}
-          cp LICENSE build/outputDir/FractalMusicGenerator/License.txt
+          New-Item build/outputDir/FractalMusicGenerator/midi -ItemType Directory -Force | Out-Null
+          New-Item build/outputDir/FractalMusicGenerator/projects -ItemType Directory -Force | Out-Null
+          New-Item build/outputDir/FractalMusicGenerator/soundfonts -ItemType Directory -Force | Out-Null
 
-          (
-            cd build/outputDir
-            powershell.exe -Command \
-              "Compress-Archive -Path FractalMusicGenerator -DestinationPath ..\\..\\FractalMusicGenerator-${APP_VERSION}-Windows.zip -Force"
-          )
+          Copy-Item LICENSE build/outputDir/FractalMusicGenerator/License.txt
+
+          Compress-Archive `
+            -Path build/outputDir/FractalMusicGenerator `
+            -DestinationPath FractalMusicGenerator-$version-Windows.zip `
+            -Force
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-app-image
           path: FractalMusicGenerator-*-Windows.zip
@@ -197,11 +198,11 @@ jobs:
 
   macos-intel:
     name: macOS Intel App Image
-    runs-on: macos-13
+    runs-on: macos-15-intel
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -255,7 +256,7 @@ jobs:
           )
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-intel-app-image
           path: FractalMusicGenerator-*-Mac-x86-64.zip
@@ -267,7 +268,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -321,7 +322,7 @@ jobs:
           )
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-arm-app-image
           path: FractalMusicGenerator-*-Mac-arm-64.zip
