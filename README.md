@@ -6,6 +6,7 @@ A downloadable cross-platform **application** for creating *polyphonic* **audio*
 
 # Download
 
+> [![Distribution Packaging](https://github.com/betaiotazeta/FractalMusicGenerator/actions/workflows/dist-packaging.yml/badge.svg)](https://github.com/betaiotazeta/FractalMusicGenerator/actions/workflows/dist-packaging.yml)
 > Releases for **Windows**, **Mac**, **Linux** and **Java** can be downloaded from [**Itch** - click *here*](https://betazeta.itch.io/fractal-music-generator)
 
 * * *
