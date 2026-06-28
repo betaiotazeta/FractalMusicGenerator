@@ -36,8 +36,7 @@ jobs:
           mkdir -p build/staging
           cp target/FractalMusicGenerator-*.jar build/staging/
 
-          JAR_PATH="$(find build/staging -maxdepth 1 -name '*.jar' | head -n 1)"
-          JAR_FILENAME="$(basename "$JAR_PATH")"
+          JAR_FILENAME="$(basename "$(find build/inputDir -maxdepth 1 -name '*.jar' | head -n 1)")"
           APP_VERSION="${JAR_FILENAME%.jar}"
           APP_VERSION="${APP_VERSION##*-}"
 
@@ -52,10 +51,11 @@ jobs:
           chmod +x build/staging/start.sh
           cp packaging/scripts/java/start.bat build/staging/
 
-          (
-            cd build/staging
-            zip -r "../../FractalMusicGenerator-${APP_VERSION}-Java.zip" .
-          )
+          mv build/staging build/FractalMusicGenerator
+
+          cd build
+          zip -r "../FractalMusicGenerator-${APP_VERSION}-Java.zip" \
+            FractalMusicGenerator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
@@ -119,11 +119,9 @@ jobs:
           cp packaging/scripts/linux/start.sh build/outputDir/FractalMusicGenerator/
           chmod +x build/outputDir/FractalMusicGenerator/start.sh
 
-          (
-            cd build/outputDir
-            zip -r "../../FractalMusicGenerator-${APP_VERSION}-Linux.zip" \
-              FractalMusicGenerator
-          )
+          cd build/outputDir
+          zip -r "../../FractalMusicGenerator-${APP_VERSION}-Linux.zip" \
+            FractalMusicGenerator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
@@ -249,11 +247,9 @@ jobs:
 
           mv build/outputDir build/FractalMusicGenerator
 
-          (
-            cd build
-            zip -r "../FractalMusicGenerator-${APP_VERSION}-Mac-x86-64.zip" \
-              FractalMusicGenerator
-          )
+          cd build
+          zip -r "../FractalMusicGenerator-${APP_VERSION}-Mac-x86-64.zip" \
+            FractalMusicGenerator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
@@ -315,11 +311,9 @@ jobs:
 
           mv build/outputDir build/FractalMusicGenerator
 
-          (
-            cd build
-            zip -r "../FractalMusicGenerator-${APP_VERSION}-Mac-arm-64.zip" \
-              FractalMusicGenerator
-          )
+          cd build
+          zip -r "../FractalMusicGenerator-${APP_VERSION}-Mac-arm-64.zip" \
+            FractalMusicGenerator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
