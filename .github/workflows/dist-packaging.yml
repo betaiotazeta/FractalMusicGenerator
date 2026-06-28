@@ -9,7 +9,7 @@ permissions:
 jobs:
 
   java:
-    name: Java Fat JAR
+    name: Java Fat Jar
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +22,7 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      - name: Build fat JAR
+      - name: Build Fat Jar
         shell: bash
         run: |
           set -euxo pipefail
@@ -36,7 +36,7 @@ jobs:
           mkdir -p build/staging
           cp target/FractalMusicGenerator-*.jar build/staging/
 
-          JAR_FILENAME="$(basename "$(find build/inputDir -maxdepth 1 -name '*.jar' | head -n 1)")"
+          JAR_FILENAME="$(basename "$(find build/staging -maxdepth 1 -name '*.jar' | head -n 1)")"
           APP_VERSION="${JAR_FILENAME%.jar}"
           APP_VERSION="${APP_VERSION##*-}"
 
@@ -78,7 +78,7 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      - name: Build fat JAR
+      - name: Build Fat Jar
         shell: bash
         run: |
           set -euxo pipefail
@@ -144,7 +144,7 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      - name: Build fat JAR
+      - name: Build Fat Jar
         shell: bash
         run: |
           set -euxo pipefail
@@ -208,7 +208,7 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      - name: Build fat JAR
+      - name: Build Fat Jar
         shell: bash
         run: |
           set -euxo pipefail
@@ -272,7 +272,7 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      - name: Build fat JAR
+      - name: Build Fat Jar
         shell: bash
         run: |
           set -euxo pipefail
